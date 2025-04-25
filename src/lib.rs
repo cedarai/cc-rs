@@ -2227,14 +2227,28 @@ impl Build {
                     // So instead, we pass the deployment target with `-m*-version-min=`, and only
                     // pass it here on visionOS and Mac Catalyst where that option does not exist:
                     // https://github.com/rust-lang/cc-rs/issues/1383
-                    let version = if target.os == "visionos" || target.abi == "macabi" {
-                        Some(self.apple_deployment_target(target))
+                    let clang_target = if target.os == "visionos" || target.abi == "macabi" {
+                        let version = Some(self.apple_deployment_target(target));
+
+                        target.llvm_target(&self.get_raw_target()?, version.as_deref())
+                    } else if target.vendor == "unknown"
+                        && target.os == "linux"
+                        && target.env == "gnu"
+                    {
+                        // Special case the `<foo>-unknown-linux-gnu` target triple, since Bazel's
+                        // hermetic build system doesn't support these target quads.
+                        match target.full_arch {
+                            "x86_64" => Cow::Borrowed("x86_64-linux-gnu"),
+                            "aarch64" => Cow::Borrowed("aarch64-linux-gnu"),
+                            "arm64" => Cow::Borrowed("arm64-linux-gnu"),
+                            _ => {
+                                panic!("Unsupported target triple - please update the cc-rs patch")
+                            }
+                        }
                     } else {
-                        None
+                        target.llvm_target(&self.get_raw_target()?, None)
                     };
 
-                    let clang_target =
-                        target.llvm_target(&self.get_raw_target()?, version.as_deref());
                     cmd.push_cc_arg(format!("--target={clang_target}").into());
                 }
             }
