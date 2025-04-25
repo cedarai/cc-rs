@@ -2186,6 +2186,20 @@ impl Build {
                     let llvm_target = if target.vendor == "apple" {
                         let deployment_target = self.apple_deployment_target(target);
                         target.versioned_llvm_target(Some(&deployment_target))
+                    } else if target.vendor == "unknown"
+                        && target.os == "linux"
+                        && target.env == "gnu"
+                    {
+                        // Special case the `<foo>-unknown-linux-gnu` target triple, since Bazel's
+                        // hermetic build system doesn't support these target quads.
+                        match target.full_arch {
+                            "x86_64" => Cow::Borrowed("x86_64-linux-gnu"),
+                            "aarch64" => Cow::Borrowed("aarch64-linux-gnu"),
+                            "arm64" => Cow::Borrowed("arm64-linux-gnu"),
+                            _ => {
+                                panic!("Unsupported target triple - please update the cc-rs patch")
+                            }
+                        }
                     } else {
                         target.versioned_llvm_target(None)
                     };
