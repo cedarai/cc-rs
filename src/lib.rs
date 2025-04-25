@@ -2227,6 +2227,7 @@ impl Build {
                     // So instead, we pass the deployment target with `-m*-version-min=`, and only
                     // pass it here on visionOS and Mac Catalyst where that option does not exist:
                     // https://github.com/rust-lang/cc-rs/issues/1383
+                    panic!("{:?}", target);
                     let clang_target = if target.os == "visionos" || target.abi == "macabi" {
                         let version = Some(self.apple_deployment_target(target));
 
